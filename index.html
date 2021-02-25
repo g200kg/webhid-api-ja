@@ -1,0 +1,609 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset='utf-8'>
+    <title>
+      WebHID API ( 日本語訳 )
+    </title>
+    <script src='https://www.w3.org/Tools/respec/respec-w3c' async class=
+    'remove'></script>
+    <script class='remove'>
+      var respecConfig = {
+        specStatus: "CG-DRAFT",
+        editors: [{
+          name: "Matt Reynolds", w3cid: "105511",
+          company: "Google", companyURL: "https://www.google.com/"
+        }],
+        github: "WICG/webhid",
+        group: "wicg",
+        xref: ["DOM", "HTML", "permissions-policy"],
+        publishDate: "2021-01-08"
+      };
+    </script>
+  </head>
+  <body>
+
+    <div style="background-color: #ddf; border: 1px solid #668; padding:10px 20px">
+      <h1>WebHID API ( 日本語訳 )</h1><h2> Draft Community Group Report 08 January 2021</h2>
+      <p>この文書は、W3Cの文書 "WebHID API , Draft Community Group Report 08 January 2021" の日本語訳です。</p>
+    
+      <p>WebHID API の正式な文書は英語版のみであり、日本語訳には翻訳に起因する誤りが含まれている場合があります。
+        英語版の正式な最新の文書は : <b><a href="https://wicg.github.io/webhid/">https://wicg.github.io/webhid/</a></b>にあります。
+      </p>
+      <p>この翻訳の元となる文書は現在、コミュニティグループのレポート (Draft Community Group Report)であり、今後も更新されて行きます。
+      </p>
+      <p>
+        日本語訳GitHub : <b><a href="https://github.com/g200kg/webhid-api-ja/">https://github.com/g200kg/webhid-api-ja/</a></b><br/>
+        日本語訳公開URL : <b><a href="https://g200kg.github.io/webhid-api-ja/">https://g200kg.github.io/webhid-api-ja/</a></b><br/>
+        <br/>
+        また、とりあえず動かしたい場合に有用な手引書が付属文書として用意されています<br/>
+        WebHID API 手引書 : <b><a href="https://g200kg.github.io/webhid-api-ja/EXPLAINER.html">https://g200kg.github.io/webhid-api-ja/EXPLAINER.html</a></b>
+      </p>
+      <img src="images/midiappy_small.png" alt="" style="float:left;margin:0px 10px"/>
+      <p>Tatsuya Shinyagaito @ g200kg<br/>
+        誤りその他があれば GitHub 経由などで連絡をお願いいたします。<br/>
+        <b><a href="https://www.g200kg.com/">https://www.g200kg.com/</a></b><br/>
+      </p>
+      <p>2021年2月25日</p>
+    </div>
+
+    <section id='abstract'>
+      <p>
+        このドキュメントでは、HID(Human Interface Device) プロトコルをサポートするデバイスへのアクセスを提供するための API について説明します。
+        <!--This document describes an API for providing access to devices that
+        support the Human Interface Device (HID) protocol.-->
+      </p>
+    </section>
+    <section id='sotd'>
+      <!-- This section is filled automatically by ReSpec. -->
+    </section>
+    <section class="informative">
+      <h2>
+        序章
+        <!--Introduction-->
+      </h2>
+      <p>
+        HID ( Human Interface Device ) とは、人間から入力を受けたり、人間に出力を提供したりするデバイスの一種です。また、HID プロトコルとは、インストール手順を簡略化するために設計されたホストとデバイス間の双方向通信のための標準規格のことを指します。 HID プロトコルはもともと USB デバイス用に開発されましたが、その後 Bluetooth をはじめとする多くのプロトコルで実装されています。
+        <!--A HID (Human Interface Device) is a type of device that takes input
+        from or provides output to humans. It also refers to the HID protocol,
+        a standard for bi-directional communication between a host and a device
+        that is designed to simplify the installation procedure. The HID
+        protocol was originally developed for USB devices but has since been
+        implemented over many other protocols, including Bluetooth.-->
+      </p>
+      <p>
+        ウェブプラットフォームはすでに多くの HID デバイスからの入力をサポートしています。キーボード、ポインティングデバイス、およびゲームパッドはすべて HID プロトコルを使用して実装されています。しかし、このサポートは、HID 入力を高レベルの入力 API に変換するオペレーティングシステムの HID ドライバに依存しています。ホストの HID ドライバによって十分にサポートされていないデバイスは、ウェブページにアクセスできないことがよくあります。同様に、ホストの HID ドライバでサポートされていないほとんどのデバイスの出力はアクセスできません。
+        <!--The web platform already supports input from many HID devices.
+        Keyboards, pointing devices, and gamepads are all typically implemented
+        using the HID protocol. However, this support relies on the operating
+        system's HID drivers that transform the HID input into high-level input
+        APIs. Devices that are not well supported by the host's HID driver are
+        often inaccessible to web pages. Similarly, the outputs on most devices
+        that are not supported by the host's HID driver are inaccessible.-->
+      </p>
+      <p>
+        関連文書の <a href="EXPLAINER.html">手引書</a> も参照してください。
+        <!--See also the related <a href="EXPLAINER.html">Explainer</a> document.-->
+      </p>
+    </section>
+    <section class="informative" id='motivating-applications'>
+      <h2>
+        目標となるアプリケーション
+        <!--Motivating Applications-->
+      </h2>
+      <section>
+        <h3>
+          ニッチデバイス
+          <!--Niche devices-->
+        </h3>
+        <p>
+          HID 入力デバイスの最も一般的なクラスは、既存の高レベルの入力 API を介して Web プラットフォームですでに十分にサポートされています。
+          たとえば、マウス入力には PointerEvent API からアクセスでき、キーボード入力にはキーボード API からアクセスできます。 これらのデバイスからの入力はホストのネイティブ HID ドライバーを使用して処理され、通常、デバイス固有のドライバーや構成が正しく機能する必要はありません。 WebHID は高レベルの入力 API によってすでに十分にサポートされているこのようなデバイスを対象としていません。
+          <!--The most common classes of HID input devices are already
+          well-supported on the web platform through existing high-level input
+          APIs. For instance, mouse input is accessible through the
+          PointerEvent API and keyboard input is accessible through the
+          Keyboard API. Input from these devices is handled using the host's
+          native HID driver and typically does not require device-specific
+          drivers or configuration to work correctly. WebHID is not intended
+          for devices like these that are already well-supported through
+          high-level input APIs.-->
+        </p>
+        <p>
+          HID デバイスの一部のクラスでは、 Web プラットフォームはデバイスの一部の機能をサポートしますが、他の機能へのアクセスを制限します。 たとえば、ゲームパッド API は、ほとんどのゲームコントローラーの入力機能をサポートしていますが、 LED インジケーターやオーディオなどのあまり一般的ではない機能はサポートしていません。 これらの機能は、ホスト API によって十分にサポートされていないことが多く、ユーザーエージェント内にサポートを追加すると、非常に複雑になる可能性があります。 WebHID は高レベル API によって提供される機能が不完全な場合に、アプリケーションに代替手段を提供します。
+          <!--For some classes of HID devices, the web platform supports some
+          features of the device but limits access to other features. For
+          instance, the Gamepad API supports the input capabilities of most
+          game controllers but does not support less common capabilities like
+          LED indicators or audio. These features are often not well-supported
+          by host APIs and adding support within the user agent can lead to
+          significant complexity. WebHID would give applications an alternative
+          when the functionality provided by the high-level API is incomplete.-->
+        </p>
+        <p>
+          HIDデバイスの多くは Web プラットフォーム API ではサポートされていません。 HID 仕様では、仮想現実の制御、フライトシミュレーター、医療機器など、HID を介してサポートできるさまざまなデバイスについて説明しています。 WebHID を使用すると、追加のドライバーやユーザーエージェントの変更を必要とせずに、これらのデバイスを使用できます。
+          <!--Many HID devices are not supported through any web platform API. The
+          HID specification describes a wide array of devices that could be
+          supported through HID, including virtual reality controls, flight
+          simulators, medical equipment, and more. WebHID would allow these
+          devices to be used without requiring additional drivers or
+          modification to the user agent.-->
+        </p>
+        <h3>
+          試作、趣味、教育向けの機器
+          <!--Prototyping, hobbyists, and educational devices-->
+        </h3>
+        <p>
+          HIDは、デバイスが使用されるホストごとにドライバーを必要とせず、ホストの汎用 HID ドライバーを使用できるようにするため、試作や趣味のためのアプリケーションにとって魅力的です。 また簡素化されたインストール手順によって、教師は各ホストのシステム構成を変更することなく、デバイスを生徒の教室に簡単に展開できます。 Web プラットフォームを介して HID デバイスへのアクセスを提供すると、特に現在ホスト固有のアプリケーションでのみサポートされているデバイスの場合、インストールに必要な要件がさらに軽減されます。
+          <!--HID is attractive for prototyping and hobbyist applications because
+          it allows devices to use the host's generic HID driver instead of
+          requiring a driver for each host where the device will be used. The
+          simplified installation procedure also makes it easier for educators
+          to deploy a device to a classroom of students without modifying the
+          system configuration on each host. Providing access to HID devices
+          through the web platform would further reduce installation
+          requirements, particularly for devices that are currently only
+          supported through host-specific applications.-->
+        </p>
+      </section>
+    </section>
+    <section class="informative" id='security-and-privacy'>
+      <h2>
+        セキュリティとプライバシーに対する考慮
+        <!--Security and Privacy Considerations-->
+      </h2>
+      <section id='abusing-access'>
+        <h3>
+          デバイスへのアクセスの悪用
+          <!--Abusing Access to a Device-->
+        </h3>
+        <p>
+          HID 周辺機器は、ユーザーの明示的な同意なしに、ページにアクセスできるようにすべきではない強力な機能を公開してしまう場合があります。 たとえば、HID 周辺機器には、周囲の情報を収集できるセンサーが搭載されているかも知れません。 あるデバイスには、開示または上書きしてはならない個人情報が保存されている場合があります。 多くのデバイスは、デバイスのファームウェアをアップグレードできる機能を公開しています。 オペレーティングシステムは通常、アプリケーションからHIDデバイスへのアクセスを制限しません。このアクセスが悪用されて、デバイスが損傷したり、デバイスに保存されているデータが破損したりする場合があります。
+          <!--HID peripherals may expose powerful functionality that should not be
+          made accessible to the page without explicit consent from the user.
+          For instance, a HID peripheral may have sensors that allow it to
+          collect information about its surroundings. A device may store
+          private information that should not be revealed or overwritten. Many
+          devices expose functionality that allow the device firmware to be
+          upgraded. Operating systems typically do not restrict access to HID
+          devices from applications, and this access can occasionally be abused
+          to damage the device or corrupt the data stored on it.-->
+        </p>
+        <p>
+          場合によっては、デバイスが Web ページからアクセスしてはならない機能を公開することがあります。 特定のデバイスは、ベンダーと製品の ID によってデバイスを認識し、列挙中にそのようなデバイスを非表示にすることでブロックされる場合があります。 HID レポート記述子を使用すると、デバイスは独自の機能を記述できます。この情報を使用して、ベンダーと製品のIDを事前に知ることができない場合でも、デバイスのクラスをブロックできます。 これは、レポート記述子内のコレクションに割り当てられた使用量の値を調べることで実現できます。 たとえば、キーボードのようなデバイスへのアクセスは、キーボード使用IDを持つトップレベルのコレクションを含むデバイスへのアクセスを拒否することで拒否できます。
+          <!--In some cases, a device may expose functionality that should not be
+          accessible at all from a web page. Specific devices may be blocked by
+          recognizing the device by its vendor and product ID and hiding such
+          devices during enumeration. The HID report descriptor allows a device
+          to describe its own capabilities, and this information can be used to
+          block classes of devices even when the vendor and product ID cannot
+          be known in advance. This can be accomplished by inspecting the usage
+          values assigned to collections within the report descriptor; for
+          instance, access to keyboard-like devices can be denied by denying
+          access to devices that include a top-level collection with the
+          Keyboard usage ID.-->
+        </p>
+        <p>
+          不正使用を軽減するために、ユーザーが明示的なアクセスを許可するまで、ページはデバイスを使用できません。 アクセスは最初にページによって要求される必要があり、使用可能なすべてのデバイスを表示する選択肢からユーザーがデバイスを選択すると許可されます。 ページからのアクセスが許可されると、デバイスが使用中であることを示すインジケーターが表示されます。
+          <!--To mitigate abuse, a device will not be made available to the page
+          until the user has granted explicit access. Access must first be
+          requested by the page and will be granted once the user has selected
+          the device from a chooser displaying all available devices. Once a
+          page has been granted access, an indicator will be displayed to
+          indicate the device is in use.-->
+        </p>
+      </section>
+      <section id='attacking-a-device'>
+        <h3>
+          デバイスへの攻撃
+          <!--Attacking a Device-->
+        </h3>
+        <p>
+          HID プロトコルは非常に用途が広く、この汎用性を利用するさまざまなデバイスが設計されています。 その結果、デバイスへのアクセスによって悪意のあるページがデバイス自体に損害を与える可能性があります。 HID ペリフェラルでは、カスタム HID レポートを使用してファームウェアアップデートを送信できるようにするのが比較的一般的です。 デバイスメーカーは、ファームウェアのバイナリが本物であることを確認するためにファームウェアアップグレードメカニズムを設計するように注意する必要があります。また、デバイスのセキュリティを低下させる可能性のあるダウングレードから保護する必要があります。 信頼できないアップグレードを使用して、デバイスに新しい機能を追加したり、まったく異なるタイプのデバイスになりすましたりする可能性があります。
+          <!--The HID protocol is extremely versatile, and a wide variety of
+          devices have been designed that take advantage of this versatility.
+          As a result, there are many possibilities for how access to a device
+          could allow a malicious page to damage the device itself. It is
+          relatively common for HID peripherals to allow firmware updates to be
+          sent using custom HID reports. Device manufacturers must take care to
+          design the firmware upgrade mechanism to verify that the firmware
+          binary is authentic, and should also protect against downgrades that
+          could reduce the security of a device. Untrusted upgrades could be
+          used to add new capabilities to a device or cause it to masquerade as
+          an entirely different type of device.-->
+        </p>
+        <p>
+          予想範囲外の入力が行われると、一部のデバイスが損傷する可能性があります。 たとえば、ページが正常でない振動コマンドを送信すると、ゲームパッドの振動機能が破損する可能性があります。
+          <!--Some devices may be damaged when inputs are provided outside of the
+          expected range. For instance, the rumble feature on a gamepad could
+          become damaged if a page sends an invalid rumble command.-->
+        </p>
+        <p>
+          一般に、これらのタイプの攻撃はデバイス固有であり、 APIレベルで軽減することはできません。
+          <!--In general, these types of attacks are device-specific and cannot be
+          mitigated at the API level.-->
+        </p>
+      </section>
+      <section id='attacking-the-host'>
+        <h3>
+          ホストへの攻撃
+          <!--Attacking the Host-->
+        </h3>
+        <p>
+          悪意のあるページがデバイスにアクセスした場合、場合によっては、このアクセスを使用してホストを攻撃する可能性があります。 主な懸念事項は、デバイスを使用して信頼される入力イベントを生成できるかどうかです。 これらのイベントは、ユーザーの意図のプロキシとして機能し、より強力な Web プラットフォーム機能にアクセスするために使用できます。
+          <!--If a malicious page gains access to a device, in some cases this
+          access can be used to attack the host. A major concern is whether the
+          device can be used to generate trusted input events. These events
+          serve as a proxy for user intent and can be used to access more
+          powerful web platform features.-->
+        </p>
+        <p>
+          マウスとキーボードは通常、HID 周辺機器として実装されており、信頼できる入力を生成することもできます。 HID キーボードまたはマウスには、プログラム可能なマクロなどの高度な機能が含まれている場合があります。これらの機能は、入力のシーケンスを格納し、後でシーケンスを再生できるようにします。 デバイスメーカーは、悪意のあるアプリが予期しない入力シーケンスでデバイスを再プログラミングしないようにそのような機能を設計するように注意する必要があります。また、ユーザーの明示的な同意なしにマクロ再生が起動されないように保護する必要があります。
+          <!--Mice and keyboards are typically implemented as HID peripherals, and
+          are also capable of generating trusted input. A HID keyboard or mouse
+          may contain advanced features like programmable macros, which store a
+          sequence of inputs and allow the sequence to be played back at a
+          later time. Device manufacturers must take care to design such
+          features in a way that would prevent a malicious app from
+          reprogramming the device with an unexpected input sequence, and must
+          also protect against triggering macro playback without the user's
+          explicit consent.-->
+        </p>
+      </section>
+      <section id='mitigation'>
+        <h3>
+          軽減策
+          <!--Mitigation-->
+        </h3>
+        <p>
+          セキュリティとプライバシーのリスクを軽減するために、ユーザーエージェントはデバイスへのアクセスを要求するための選択肢ベースのフローを実装することをお勧めします。 ページが HID デバイスへのアクセスを要求すると、ユーザーエージェントは、ページがデバイスにアクセスすることをユーザーに通知するダイアログを表示する必要があります。 ダイアログには、接続されている HID デバイスのリストが表示され、ページに表示されるデバイスを選択するようにユーザーに求められます。 偶発的なクリックの可能性を減らすために、ダイアログには 2 つの個別のインタラクションが必要です。 1 つはリストからデバイスを選択するためのインタラクションで、もう 1 つは選択を確認してダイアログを閉じるためのインタラクションです。
+          <!--To mitigate security and privacy risks, it is recommended that
+          user agents implement a chooser-based flow for requesting device
+          access. When a page requests access to a HID device, the user
+          agent should display a dialog that informs the user that the
+          page wants to access a device. The dialog should display a list
+          of connected HID devices and ask the user to select a device
+          that will be exposed to the page. To reduce the possibility of
+          accidental clicks, the dialog should require two separate
+          interactions: one interaction to select the device from the list
+          and a second interaction to confirm the selection and dismiss
+          the dialog.-->
+        </p>
+      </section>
+    </section>
+    <section id='enumeration'>
+      <h2>
+        デバイスの列挙
+        <!--Device Enumeration-->
+      </h2>
+      <pre class="idl">
+        dictionary HIDDeviceFilter {
+            unsigned long vendorId;
+            unsigned short productId;
+            unsigned short usagePage;
+            unsigned short usage;
+        };
+
+        dictionary HIDDeviceRequestOptions {
+            required sequence&lt;HIDDeviceFilter&gt; filters;
+        };
+
+        [
+            Exposed=Window,
+            SecureContext
+        ]
+        interface HID : EventTarget {
+            attribute EventHandler onconnect;
+            attribute EventHandler ondisconnect;
+            Promise&lt;sequence&lt;HIDDevice&gt;&gt; getDevices();
+            Promise&lt;sequence&lt;HIDDevice&gt;&gt; requestDevice(
+                HIDDeviceRequestOptions options);
+        };
+
+        [SecureContext] partial interface Navigator {
+            [SameObject] readonly attribute HID hid;
+        };
+      </pre>
+      <aside class="example">
+        <p>
+          デバイスを取得し、デバイス名をコンソールに出力します。
+          <!--Retrieve devices and log the device names to the console.-->
+        </p>
+        <pre class="js">
+          document.addEventListener('DOMContentLoaded', async () =&gt; {
+            let devices = await navigator.hid.getDevices();
+            devices.forEach(device =&gt; {
+              console.log(`HID: ${device.productName}`);
+            });
+          });
+        </pre>
+        <p>
+          HID デバイスの接続と切断に対してイベントリスナーを登録します。
+          <!--Register event listeners for connection and disconnection of HID
+          devices.-->
+        </p>
+        <pre class="js">
+          navigator.hid.addEventListener('connect', ({device}) =&gt; {
+            console.log(`HID connected: ${device.productName}`);
+          });
+
+          navigator.hid.addEventListener('disconnect', ({device}) =&gt; {
+            console.log(`HID disconnected: ${device.productName}`);
+          });
+        </pre>
+        <p>
+          デバイスへのアクセス許可が付与されるまで {{HID/getDevices()}} を介してデバイスにアクセスすることはできず、接続イベントも生成しません。 ページは {{HID/requestDevice()}} を使用して許可を要求できます。 この例では、ページはベンダー ID `0xABCD`、プロダクト ID `0x1234` のデバイスへのアクセスを要求しています。 またそのデバイスは、 usage Page がコンシューマー（`0x0C`）で usage ID がコンシューマーコントロール（`0x01`）のコレクションを持たなくてはなりません。
+          <!--Devices are not accessible through {{HID/getDevices()}} and will not
+          generate connection events until permission has been granted to
+          access the device. The page may request permission using
+          {{HID/requestDevice()}}. In this example, the page requests access to
+          a device with vendor ID `0xABCD`, product ID `0x1234`. The device
+          must also have a collection with usage page Consumer (`0x0C`) and
+          usage ID Consumer Control (`0x01`).-->
+        </p>
+        <pre class="js">
+          let requestButton = document.getElementById("request-hid-device");
+          requestButton.addEventListener("click", async () =&gt; {
+            let device;
+            try {
+              const devices = await navigator.hid.requestDevice({
+                filters: [
+                  {
+                    vendorId: 0xabcd,
+                    productId: 0x1234,
+                    usagePage: 0x0c,
+                    usage: 0x01,
+                  },
+                ],
+              });
+              device = devices[0];
+            } catch (error) {
+              console.log("An error occurred.");
+            }
+
+            if (!device) {
+              console.log("No device was selected.");
+            } else {
+              console.log(`HID: ${device.productName}`);
+            }
+          });
+        </pre>
+      </aside>
+      <p>
+        次の手順で `match` が返される場合、 {{HIDDevice}} |device| は {{HIDDeviceFilter}} |filter| に <dfn>一致するデバイス</dfn> となります:
+        <!--A {{HIDDevice}} |device| is a <dfn>matching device</dfn> for a
+        {{HIDDeviceFilter}} |filter| if the following steps return `match`:-->
+      </p>
+      <ol>
+        <li>
+        |filter|.{{HIDDeviceFilter/vendorId}} が存在し、|device|.{{HIDDevice/vendorId}} が |filter|.{{HIDDevice/vendorId}} と等しくない場合、`mismatch` を返します。
+        <!--If |filter|.{{HIDDeviceFilter/vendorId}} is present and
+        |device|.{{HIDDevice/vendorId}} does not equal
+        |filter|.{{HIDDeviceFilter/vendorId}}, return `mismatch`.-->
+        </li>
+        <li>
+        |filter|.{{HIDDeviceFilter/productId}} が存在し、|device|.{{HIDDevice/productId}} が |filter|.{{HIDDevice/productId}} と等しくない場合、`mismatch` を返します。
+        <!--If |filter|.{{HIDDeviceFilter/productId}} is present and
+        |device|.{{HIDDevice/productId}} does not equal
+        |filter|.{{HIDDeviceFilter/productId}}, return `mismatch`.-->
+        </li>
+        <li>
+        |filter|.{{HIDDeviceFilter/usagePage}} が存在する場合は、|device|.{{HIDDevice/collections}} の {{HIDCollectionInfo}} コレクションに対して繰り返し処理します。 [=一致するコレクション=] がない場合は、`mismatch` を返します。
+        <!--If |filter|.{{HIDDeviceFilter/usagePage}} is present, iterate over
+        the {{HIDCollectionInfo}} collections in
+        |device|.{{HIDDevice/collections}}. If there is no [=matching
+        collection=], return `mismatch`.-->
+        </li>
+        <li>
+          `match` を返します。
+          <!--Return `match`.-->
+        </li>
+      </ol>
+      <p>
+        次の手順で match が返される場合、{{HIDCollectionInfo}} |collection| は {{HIDDeviceFilter}} |filter| に <dfn>一致するコレクション</dfn> となります:
+        <!--A {{HIDCollectionInfo}} |collection| is a <dfn>matching
+        collection</dfn> for a {{HIDDeviceFilter}} |filter| if the following
+        steps return match:-->
+      </p>
+      <ol>
+        <li>
+        |filter|.{{HIDDeviceFilter/usagePage}} が存在し、|device|.{{HIDCollectionInfo/usagePage}} が |filter|.{{HIDDeviceFilter/usagePage}} と等しくない場合、mismatch を返します。
+        <!--If |filter|.{{HIDDeviceFilter/usagePage}} is present and
+        |device|.{{HIDCollectionInfo/usagePage}} does not equal
+        |filter|.{{HIDDeviceFilter/usagePage}}, return mismatch.-->
+        </li>
+        <li>
+        |filter|.{{HIDDeviceFilter/usage}} が存在し、|device|.{{HIDCollectionInfo/usage}} が |filter|.{{HIDDeviceFilter/usage}} と等しくない場合、mismatch を返します。
+        <!--If |filter|.{{HIDDeviceFilter/usage}} is present and
+        |device|.{{HIDCollectionInfo/usage}} does not equal
+        |filter|.{{HIDDeviceFilter/usage}}, return mismatch.-->
+        </li>
+        <li>
+        match を返します。
+        <!--Return match.-->
+        </li>
+      </ol>
+      <p>
+        次の手順で有効が返された場合、{{HIDDeviceFilter}} |filter| は <dfn>有効</dfn> です:
+        <!--A {{HIDDeviceFilter}} |filter| <dfn>is valid</dfn> if the following
+        steps return valid:-->
+      </p>
+      <ol>
+        <li>
+        |filter|.{{HIDDeviceFilter/productId}} が存在し、|filter|.{{HIDDeviceFilter/vendorId}} が存在しない場合は、 無効 を返します。
+        <!--If |filter|.{{HIDDeviceFilter/productId}} is present and
+        |filter|.{{HIDDeviceFilter/vendorId}} is not present, return invalid.-->
+        </li>
+        <li>
+        |filter|.{{HIDDeviceFilter/usage}} が存在し、|filter|.{{HIDDeviceFilter/usagePage}} が存在しない場合は、無効を返します。
+        <!--If |filter|.{{HIDDeviceFilter/usage}} is present and
+        |filter|.{{HIDDeviceFilter/usagePage}} is not present, return invalid.-->
+        </li>
+        <li>
+        有効 を返します。
+        <!--Return valid.-->
+        </li>
+      </ol>
+      <p>
+        UA は、<dfn>システムに接続されているすべてのデバイスを列挙</dfn> できる必要があります (MUST)。 アルゴリズムが列挙を要求するたびにこの作業を実行する必要はありません。 UA は、最初の列挙を実行した結果をキャッシュしてから、デバイスの接続および切断イベントの監視を開始し、接続されたデバイスをキャッシュされた列挙に追加し、切断されたデバイスを削除しても構いません (MAY)。 この方法は、オペレーティングシステムコールの数を減らすために推奨されます。
+        <!--The UA MUST be able to <dfn>enumerate all devices attached to the
+        system</dfn>. It is not required to perform this work each time an
+        algorithm requests an enumeration. The UA MAY cache the result of the
+        first enumeration it performs and then begin monitoring for device
+        connection and disconnection events, adding connected devices to its
+        cached enumeration and removing disconnected devices. This mode of
+        operation is preferred as it reduces the number of operating system
+        calls.-->
+      </p>
+      <section id='events'>
+        <h3>
+          イベント
+          <!--Events-->
+        </h3>
+        <pre class="idl">
+          dictionary HIDConnectionEventInit : EventInit {
+              required HIDDevice device;
+          };
+
+          [
+              Exposed=Window,
+              SecureContext
+          ] interface HIDConnectionEvent : Event {
+              constructor(DOMString type, HIDConnectionEventInit eventInitDict);
+              [SameObject] readonly attribute HIDDevice device;
+          };
+
+          dictionary HIDInputReportEventInit : EventInit {
+              required HIDDevice device;
+              required octet reportId;
+              required DataView data;
+          };
+
+          [
+              Exposed=Window,
+              SecureContext
+          ] interface HIDInputReportEvent : Event {
+              constructor(DOMString type, HIDInputReportEventInit eventInitDict);
+              [SameObject] readonly attribute HIDDevice device;
+              readonly attribute octet reportId;
+              readonly attribute DataView data;
+          };
+        </pre>
+      </section>
+      <section id='report-descriptor'>
+        <h3>
+          HID コレクションとレポート情報
+          <!--HID Collection and Report Information-->
+        </h3>
+        <pre class="idl">
+          enum HIDUnitSystem {
+              "none", "si-linear", "si-rotation", "english-linear",
+              "english-rotation", "vendor-defined", "reserved"
+          };
+
+          dictionary HIDReportItem {
+              boolean isAbsolute;
+              boolean isArray;
+              boolean isBufferedBytes;
+              boolean isConstant;
+              boolean isLinear;
+              boolean isRange;
+              boolean isVolatile;
+              boolean hasNull;
+              boolean hasPreferredState;
+              boolean wrap;
+              sequence&lt;unsigned long&gt; usages;
+              unsigned long usageMinimum;
+              unsigned long usageMaximum;
+              unsigned short reportSize;
+              unsigned short reportCount;
+              byte unitExponent;
+              HIDUnitSystem unitSystem;
+              byte unitFactorLengthExponent;
+              byte unitFactorMassExponent;
+              byte unitFactorTimeExponent;
+              byte unitFactorTemperatureExponent;
+              byte unitFactorCurrentExponent;
+              byte unitFactorLuminousIntensityExponent;
+              long logicalMinimum;
+              long logicalMaximum;
+              long physicalMinimum;
+              long physicalMaximum;
+              sequence&lt;DOMString&gt; strings;
+          };
+
+          dictionary HIDReportInfo {
+              octet reportId;
+              sequence&lt;HIDReportItem&gt; items;
+          };
+
+          dictionary HIDCollectionInfo {
+              unsigned short usagePage;
+              unsigned short usage;
+              octet type;
+              sequence&lt;HIDCollectionInfo&gt; children;
+              sequence&lt;HIDReportInfo&gt; inputReports;
+              sequence&lt;HIDReportInfo&gt; outputReports;
+              sequence&lt;HIDReportInfo&gt; featureReports;
+          };
+        </pre>
+      </section>
+    </section>
+    <section id='device-usage'>
+      <h2>
+        デバイスの使用法
+        <!--Device Usage-->
+      </h2>
+      <pre class="idl">
+        [
+            Exposed=Window,
+            SecureContext
+        ] interface HIDDevice : EventTarget {
+            attribute EventHandler oninputreport;
+            readonly attribute boolean opened;
+            readonly attribute unsigned short vendorId;
+            readonly attribute unsigned short productId;
+            readonly attribute DOMString productName;
+            readonly attribute FrozenArray&lt;HIDCollectionInfo&gt; collections;
+            Promise&lt;undefined&gt; open();
+            Promise&lt;undefined&gt; close();
+            Promise&lt;undefined&gt; sendReport([EnforceRange] octet reportId, BufferSource data);
+            Promise&lt;undefined&gt; sendFeatureReport([EnforceRange] octet reportId, BufferSource data);
+            Promise&lt;DataView&gt; receiveFeatureReport([EnforceRange] octet reportId);
+        };
+      </pre>
+    </section>
+    <section id='integrations'>
+      <h2>
+        統合
+        <!--Integrations-->
+      </h2>
+      <section id="permissions-policy">
+        <h3>
+          権限ポリシー
+          <!--Permissions Policy-->
+        </h3>
+        <p>
+          この仕様は、{{Navigator/hid}} 属性を {{Navigator}} オブジェクト上に公開するかどうかを制御する機能を定義します。
+          <!--This specification defines a feature that controls whether the
+          {{Navigator/hid}} attribute is exposed on the {{Navigator}} object.-->
+        </p>
+        <p>
+          この機能の機能名は `"hid"` です。
+          <!--The feature name for this feature is `"hid"`.-->
+        </p>
+        <p>
+          この機能のデフォルトの許可リスト ([=default allowlist=]) は `["self"]` です。
+          <!--The [=default allowlist=] for this feature is `["self"]`.-->
+        </p>
+      </section>
+    </section>
+    <section id='conformance'>
+      <!-- This section is filled automatically by ReSpec. -->
+      <p>非規範として標記されたセクションと同様に、この仕様のすべてのオーサリングガイドライン、図、例、および注記は非規範的です。 この仕様の他のすべては規範的です。</p>
+
+      <p>このドキュメントのキーワード MAY および MUST は、ここに示すように、すべて大文字で表示される場合にのみ、BCP 14 [RFC2119] [RFC8174]で説明されているように解釈されます。</p>
+    </section>
+  </body>
+</html>
